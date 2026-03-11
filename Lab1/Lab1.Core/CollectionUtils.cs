@@ -1,9 +1,9 @@
 namespace Lab1.Core;
 
-public static class CollectionUtils
+public class CollectionUtils
 {
     // Обчислює середнє значення чисел. Викидає InvalidOperationException для порожньої колекції
-    public static double Average(IEnumerable<double> numbers)
+    public double Average(IEnumerable<double> numbers)
     {
         if (numbers == null)
         {
@@ -20,7 +20,7 @@ public static class CollectionUtils
     }
 
     // Повертає максимальний елемент. Викидає InvalidOperationException для порожньої колекції
-    public static T Max<T>(IEnumerable<T> items) where T : IComparable<T>
+    public T Max<T>(IEnumerable<T> items) where T : IComparable<T>
     {
         if (items == null)
         {
@@ -33,38 +33,22 @@ public static class CollectionUtils
             throw new InvalidOperationException("Cannot find max of an empty collection.");
         }
 
-        T max = list[0];
-        foreach (var item in list.Skip(1))
-        {
-            if (item.CompareTo(max) > 0)
-            {
-                max = item;
-            }
-        }
-
-        return max;
+        return list.Aggregate((max, item) => item.CompareTo(max) > 0 ? item : max);
     }
 
     // Повертає унікальні елементи зі збереженням порядку
-    public static IEnumerable<T> Distinct<T>(IEnumerable<T> items)
+    public IEnumerable<T> Distinct<T>(IEnumerable<T> items)
     {
         if (items == null)
         {
             throw new ArgumentNullException(nameof(items));
         }
 
-        var seen = new HashSet<T>();
-        foreach (var item in items)
-        {
-            if (seen.Add(item))
-            {
-                yield return item;
-            }
-        }
+        return items.Distinct();
     }
 
     // Розбиває колекцію на частини заданого розміру. Викидає ArgumentOutOfRangeException для size <= 0
-    public static IEnumerable<IEnumerable<T>> Chunk<T>(IEnumerable<T> items, int size)
+    public IEnumerable<IEnumerable<T>> Chunk<T>(IEnumerable<T> items, int size)
     {
         if (items == null)
         {
@@ -77,9 +61,7 @@ public static class CollectionUtils
         }
 
         var list = items.ToList();
-        for (int i = 0; i < list.Count; i += size)
-        {
-            yield return list.Skip(i).Take(size);
-        }
+        return Enumerable.Range(0, (list.Count + size - 1) / size)
+            .Select(i => list.Skip(i * size).Take(size));
     }
 }

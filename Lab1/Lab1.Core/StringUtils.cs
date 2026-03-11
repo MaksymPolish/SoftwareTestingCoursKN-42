@@ -1,44 +1,32 @@
 namespace Lab1.Core;
 
-public static class StringUtils
+public class StringUtils
 {
     // Робить першу літеру кожного слова великою
-    public static string Capitalize(string input)
+    public string Capitalize(string input)
     {
         if (string.IsNullOrEmpty(input))
         {
             return input;
         }
 
-        var words = input.Split(' ');
-        var capitalizedWords = words.Select(word =>
-        {
-            if (word.Length == 0)
-            {
-                return word;
-            }
-
-            return char.ToUpper(word[0]) + word.Substring(1).ToLower();
-        });
-
-        return string.Join(" ", capitalizedWords);
+        return string.Join(" ", input.Split(' ')
+            .Select(word => word.Length == 0 ? word : char.ToUpper(word[0]) + word[1..].ToLower()));
     }
 
     // Переворотить рядок навпаки
-    public static string Reverse(string input)
+    public string Reverse(string input)
     {
         if (input == null)
         {
             throw new ArgumentNullException(nameof(input));
         }
 
-        var charArray = input.ToCharArray();
-        Array.Reverse(charArray);
-        return new string(charArray);
+        return new string(input.Reverse().ToArray());
     }
 
     // Перевіряє, чи є рядок паліндромом (без урахування регістру)
-    public static bool IsPalindrome(string input)
+    public bool IsPalindrome(string input)
     {
         if (input == null)
         {
@@ -51,7 +39,7 @@ public static class StringUtils
     }
 
     // Обрізає рядок до максимальної довжини та додає "..." якщо потрібно
-    public static string Truncate(string input, int maxLength)
+    public string Truncate(string input, int maxLength)
     {
         if (input == null)
         {
@@ -68,11 +56,6 @@ public static class StringUtils
             return input;
         }
 
-        if (maxLength < 3)
-        {
-            return input.Substring(0, maxLength);
-        }
-
-        return input.Substring(0, maxLength - 3) + "...";
+        return maxLength < 3 ? input[..maxLength] : input[..(maxLength - 3)] + "...";
     }
 }
