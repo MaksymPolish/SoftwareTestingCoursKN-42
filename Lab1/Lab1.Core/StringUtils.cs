@@ -11,7 +11,7 @@ public class StringUtils
         }
 
         return string.Join(" ", input.Split(' ')
-            .Select(word => word.Length == 0 ? word : char.ToUpper(word[0]) + word[1..].ToLower()));
+            .Select(word => word.Length == 0 ? word : char.ToUpper(word[0]) + word.Substring(1).ToLower()));
     }
 
     // Переворотить рядок навпаки
@@ -56,6 +56,6 @@ public class StringUtils
             return input;
         }
 
-        return maxLength < 3 ? input[..maxLength] : input[..(maxLength - 3)] + "...";
+        return maxLength < 3 ? input.Substring(0, maxLength) : input.Substring(0, maxLength - 3) + "...";
     }
 }
