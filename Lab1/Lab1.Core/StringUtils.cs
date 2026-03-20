@@ -35,7 +35,7 @@ public class StringUtils
 
         var normalized = input.ToLower();
         var reversed = Reverse(normalized);
-        return normalized == reversed;
+        return normalized == reversed;   
     }
 
     // Обрізає рядок до максимальної довжини та додає "..." якщо потрібно
