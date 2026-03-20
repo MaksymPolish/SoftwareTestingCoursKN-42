@@ -60,7 +60,7 @@ public class WeatherForecastServiceTests
         };
 
         _cacheService.Exists(cacheKey).Returns(false);
-        _apiClient.GetForecastAsync(city, days).Returns(apiForecast);
+        _apiClient.GetForecastAsync(city, days).Returns(Task.FromResult((IEnumerable<WeatherData>)apiForecast));
 
         // Act
         var result = await _sut.GetForecastAsync(city, days);
@@ -90,15 +90,15 @@ public class WeatherForecastServiceTests
 
         _cacheService.Exists(cacheKey).Returns(false); // First call returns false
         _apiClient.GetForecastAsync(city, days)
-            .Returns(Task.FromException<IEnumerable<WeatherData>>(new HttpRequestException("API unavailable")));
-        _cacheService.Get<IEnumerable<WeatherData>>(cacheKey).Returns(cachedForecast); // On error, we try cache
+            .Returns(Task.FromException<IEnumerable<WeatherData>>(new HttpRequestException("API unavailable"))); // On error, we try cache
+        _cacheService.Get<IEnumerable<WeatherData>>(cacheKey).Returns(cachedForecast);
 
         // Act
         var result = await _sut.GetForecastAsync(city, days);
 
         // Assert
         result.ShouldBe(cachedForecast);
-        await _apiClient.Received(1).GetForecastAsync(city, days);
+        _apiClient.Received(1).GetForecastAsync(city, days);
     }
 
     // Test 4: API Exception without Cached Data
@@ -173,7 +173,7 @@ public class WeatherForecastServiceTests
         {
             new WeatherData(city, 20.0, "Clear", DateTime.UtcNow)
         };
-        _apiClient.GetForecastAsync(city, days).Returns(forecast);
+        _apiClient.GetForecastAsync(city, days).Returns(Task.FromResult((IEnumerable<WeatherData>)forecast));
 
         // Act
         await _sut.GetForecastAsync(city, days);
@@ -202,7 +202,7 @@ public class WeatherForecastServiceTests
 
         _cacheService.Exists(cacheKey).Returns(false, true); // First call: miss, Second call: hit
         _cacheService.Get<IEnumerable<WeatherData>>(cacheKey).Returns(forecast);
-        _apiClient.GetForecastAsync(city, days).Returns(forecast);
+        _apiClient.GetForecastAsync(city, days).Returns(Task.FromResult((IEnumerable<WeatherData>)forecast));
 
         // Act - First call
         var result1 = await _sut.GetForecastAsync(city, days);
@@ -213,7 +213,7 @@ public class WeatherForecastServiceTests
         // Assert
         result1.ShouldBe(forecast);
         result2.ShouldBe(forecast);
-        await _apiClient.Received(1).GetForecastAsync(city, days); // API called only once
+        _apiClient.Received(1).GetForecastAsync(city, days); // API called only once
     }
 
     // Test 10: Cache Expiration Time is 30 Minutes
@@ -230,7 +230,7 @@ public class WeatherForecastServiceTests
         };
 
         _cacheService.Exists(Arg.Any<string>()).Returns(false);
-        _apiClient.GetForecastAsync(city, days).Returns(forecast);
+        _apiClient.GetForecastAsync(city, days).Returns(Task.FromResult((IEnumerable<WeatherData>)forecast));
 
         // Act
         await _sut.GetForecastAsync(city, days);

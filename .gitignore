@@ -2,3 +2,5 @@
 **/obj/
 **/bin/
 **/coverage/
+**/appsettings.example.json
+**/appsettings.json
