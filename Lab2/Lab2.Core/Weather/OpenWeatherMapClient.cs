@@ -8,18 +8,29 @@ public class OpenWeatherMapClient : IWeatherApiClient
     private readonly HttpClient _httpClient;
     private readonly WeatherApiSettings _settings;
 
-    public OpenWeatherMapClient(WeatherApiSettings settings)
+    public OpenWeatherMapClient(WeatherApiSettings settings) : this(settings, null)
+    {
+    }
+
+    public OpenWeatherMapClient(WeatherApiSettings settings, HttpClient? httpClient)
     {
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         
         if (string.IsNullOrEmpty(_settings.ApiKey))
             throw new ArgumentException("API Key cannot be empty", nameof(settings));
 
-        _httpClient = new HttpClient
+        _httpClient = httpClient ?? new HttpClient
         {
             BaseAddress = new Uri(_settings.BaseUrl),
             Timeout = TimeSpan.FromSeconds(_settings.Timeout)
         };
+
+        // Set base address and timeout if using injected HttpClient
+        if (httpClient != null)
+        {
+            _httpClient.BaseAddress = new Uri(_settings.BaseUrl);
+            _httpClient.Timeout = TimeSpan.FromSeconds(_settings.Timeout);
+        }
     }
 
     public async Task<WeatherData> GetCurrentWeatherAsync(string city)
