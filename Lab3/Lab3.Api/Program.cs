@@ -1,5 +1,6 @@
 using Lab3.Api.Repositories;
 using Lab3.Api.Middleware;
+using Lab3.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -7,6 +8,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 builder.Services.AddSingleton<IProductRepository, InMemoryProductRepository>();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ICorrelationIdProvider, CorrelationIdProvider>();
 
 var app = builder.Build();
 
