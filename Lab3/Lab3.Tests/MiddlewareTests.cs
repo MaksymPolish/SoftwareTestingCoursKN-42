@@ -28,11 +28,11 @@ public class MiddlewareTests : IClassFixture<CustomWebApplicationFactory>
         var client = _factory.CreateClient();
 
         // Act
-        var response = await client.GetAsync("/api/products");
+        var response = await client.GetAsync("/api/products", TestContext.Current.CancellationToken);
 
         // Assert
         response.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
-        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>(TestContext.Current.CancellationToken);
         body.GetProperty("error").GetString().ShouldBe("API key is required");
     }
 
@@ -45,11 +45,11 @@ public class MiddlewareTests : IClassFixture<CustomWebApplicationFactory>
         client.DefaultRequestHeaders.Add("X-Api-Key", "wrong-key");
 
         // Act
-        var response = await client.GetAsync("/api/products");
+        var response = await client.GetAsync("/api/products", TestContext.Current.CancellationToken);
 
         // Assert
         response.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
-        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>(TestContext.Current.CancellationToken);
         body.GetProperty("error").GetString().ShouldBe("Invalid API key");
     }
 
@@ -75,12 +75,12 @@ public class MiddlewareTests : IClassFixture<CustomWebApplicationFactory>
         client.DefaultRequestHeaders.Add("X-Api-Key", "valid-test-key");
 
         // Act
-        var response = await client.GetAsync("/api/products");
+        var response = await client.GetAsync("/api/products", TestContext.Current.CancellationToken);
 
         // Assert
         response.StatusCode.ShouldBe(HttpStatusCode.InternalServerError);
         response.Content.Headers.ContentType.ShouldNotBeNull();
-        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>(TestContext.Current.CancellationToken);
         body.GetProperty("error").GetString().ShouldNotBeNullOrEmpty();
         body.TryGetProperty("type", out var type).ShouldBeTrue();
     }
@@ -94,7 +94,7 @@ public class MiddlewareTests : IClassFixture<CustomWebApplicationFactory>
         client.DefaultRequestHeaders.Add("X-Api-Key", "valid-test-key");
 
         // Act
-        var response = await client.GetAsync("/api/products");
+        var response = await client.GetAsync("/api/products", TestContext.Current.CancellationToken);
 
         // Assert
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
@@ -108,7 +108,7 @@ public class MiddlewareTests : IClassFixture<CustomWebApplicationFactory>
         var client = _factory.CreateClient();
 
         // Act
-        var response = await client.GetAsync("/api/products");
+        var response = await client.GetAsync("/api/products", TestContext.Current.CancellationToken);
 
         // Assert - should get 401 from auth middleware
         response.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
@@ -123,7 +123,7 @@ public class MiddlewareTests : IClassFixture<CustomWebApplicationFactory>
         client.DefaultRequestHeaders.Add("X-Api-Key", "valid-test-key");
 
         // Act
-        var response = await client.GetAsync("/api/products");
+        var response = await client.GetAsync("/api/products", TestContext.Current.CancellationToken);
 
         // Assert
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
@@ -141,8 +141,8 @@ public class MiddlewareTests : IClassFixture<CustomWebApplicationFactory>
         client.DefaultRequestHeaders.Add("X-Api-Key", "valid-test-key");
 
         // Act - Make multiple requests
-        var response1 = await client.GetAsync("/api/products");
-        var response2 = await client.GetAsync("/api/products");
+        var response1 = await client.GetAsync("/api/products", TestContext.Current.CancellationToken);
+        var response2 = await client.GetAsync("/api/products", TestContext.Current.CancellationToken);
 
         // Assert - Both should be successful
         response1.StatusCode.ShouldBe(HttpStatusCode.OK);
@@ -160,7 +160,7 @@ public class MiddlewareTests : IClassFixture<CustomWebApplicationFactory>
         client.DefaultRequestHeaders.Add("X-Api-Key", "valid-test-key");
 
         // Act
-        var response = await client.GetAsync("/api/products");
+        var response = await client.GetAsync("/api/products", TestContext.Current.CancellationToken);
 
         // Assert
         response.StatusCode.ShouldBe(HttpStatusCode.OK);

@@ -30,11 +30,11 @@ public class ProductsApiTests : IClassFixture<CustomWebApplicationFactory>
         var client = CreateClient();
 
         // Act
-        var response = await client.GetAsync("/api/products");
+        var response = await client.GetAsync("/api/products", TestContext.Current.CancellationToken);
 
         // Assert
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
-        var products = await response.Content.ReadFromJsonAsync<List<Product>>();
+        var products = await response.Content.ReadFromJsonAsync<List<Product>>(TestContext.Current.CancellationToken);
         products.ShouldNotBeNull();
         // Check that we have products (at least the seeded ones)
         products.Count.ShouldBeGreaterThan(0);
@@ -53,11 +53,11 @@ public class ProductsApiTests : IClassFixture<CustomWebApplicationFactory>
         var client = CreateClient();
 
         // Act
-        var response = await client.GetAsync("/api/products/1");
+        var response = await client.GetAsync("/api/products/1", TestContext.Current.CancellationToken);
 
         // Assert
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
-        var product = await response.Content.ReadFromJsonAsync<Product>();
+        var product = await response.Content.ReadFromJsonAsync<Product>(TestContext.Current.CancellationToken);
         product.ShouldNotBeNull();
         product.Id.ShouldBe(1);
         product.Name.ShouldBe("Laptop");
@@ -72,7 +72,7 @@ public class ProductsApiTests : IClassFixture<CustomWebApplicationFactory>
         var client = CreateClient();
 
         // Act
-        var response = await client.GetAsync("/api/products/999");
+        var response = await client.GetAsync("/api/products/999", TestContext.Current.CancellationToken);
 
         // Assert
         response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
@@ -87,13 +87,13 @@ public class ProductsApiTests : IClassFixture<CustomWebApplicationFactory>
         var newProduct = new { Name = "Keyboard", Price = 49.99m };
 
         // Act
-        var response = await client.PostAsJsonAsync("/api/products", newProduct);
+        var response = await client.PostAsJsonAsync("/api/products", newProduct, TestContext.Current.CancellationToken);
 
         // Assert
         response.StatusCode.ShouldBe(HttpStatusCode.Created);
         response.Headers.Location.ShouldNotBeNull();
 
-        var product = await response.Content.ReadFromJsonAsync<Product>();
+        var product = await response.Content.ReadFromJsonAsync<Product>(TestContext.Current.CancellationToken);
         product.ShouldNotBeNull();
         product.Name.ShouldBe("Keyboard");
         product.Price.ShouldBe(49.99m);
@@ -109,11 +109,11 @@ public class ProductsApiTests : IClassFixture<CustomWebApplicationFactory>
         var updatedProduct = new { Name = "Updated Laptop", Price = 1099.99m };
 
         // Act
-        var response = await client.PutAsJsonAsync("/api/products/1", updatedProduct);
+        var response = await client.PutAsJsonAsync("/api/products/1", updatedProduct, TestContext.Current.CancellationToken);
 
         // Assert
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
-        var product = await response.Content.ReadFromJsonAsync<Product>();
+        var product = await response.Content.ReadFromJsonAsync<Product>(TestContext.Current.CancellationToken);
         product.ShouldNotBeNull();
         product.Name.ShouldBe("Updated Laptop");
         product.Price.ShouldBe(1099.99m);
@@ -128,18 +128,18 @@ public class ProductsApiTests : IClassFixture<CustomWebApplicationFactory>
 
         // First create a product to delete
         var createResponse = await client.PostAsJsonAsync("/api/products", 
-            new { Name = "TestDelete", Price = 99.99m });
-        var createdProduct = await createResponse.Content.ReadFromJsonAsync<Product>();
+            new { Name = "TestDelete", Price = 99.99m }, TestContext.Current.CancellationToken);
+        var createdProduct = await createResponse.Content.ReadFromJsonAsync<Product>(TestContext.Current.CancellationToken);
         var productId = createdProduct!.Id;
 
         // Act
-        var deleteResponse = await client.DeleteAsync($"/api/products/{productId}");
+        var deleteResponse = await client.DeleteAsync($"/api/products/{productId}", TestContext.Current.CancellationToken);
 
         // Assert
         deleteResponse.StatusCode.ShouldBe(HttpStatusCode.NoContent);
 
         // Verify deletion
-        var getResponse = await client.GetAsync($"/api/products/{productId}");
+        var getResponse = await client.GetAsync($"/api/products/{productId}", TestContext.Current.CancellationToken);
         getResponse.StatusCode.ShouldBe(HttpStatusCode.NotFound);
     }
 }
