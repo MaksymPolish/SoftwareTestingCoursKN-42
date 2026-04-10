@@ -69,7 +69,7 @@ public class StudentRepository
             {
                 var enrollmentsWithGrades = s.Enrollments
                     .Where(e => e.Grade.HasValue)
-                    .Select(e => e.Grade.Value)
+                    .Select(e => e.Grade.GetValueOrDefault())
                     .ToList();
 
                 return enrollmentsWithGrades.Count > 0
