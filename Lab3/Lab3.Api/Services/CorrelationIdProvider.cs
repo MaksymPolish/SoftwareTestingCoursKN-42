@@ -10,6 +10,7 @@ public class CorrelationIdProvider : ICorrelationIdProvider
 
     public CorrelationIdProvider(IHttpContextAccessor contextAccessor)
     {
+        
         _contextAccessor = contextAccessor;
     }
 
