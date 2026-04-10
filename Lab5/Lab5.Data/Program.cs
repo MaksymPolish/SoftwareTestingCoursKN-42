@@ -9,13 +9,33 @@ using FluentValidation;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container
-// 1. Database Context (using SQLite file-based database)
+// 1. Database Context (supports SQLite, SQL Server, PostgreSQL)
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
     var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
         ?? "Data Source=/app/data/lab5.db";
     
-    options.UseSqlite(connectionString);
+    Console.WriteLine($"[INFO] Connection String: {connectionString}");
+    
+    // Determine provider based on connection string
+    if (connectionString.Contains("Host="))
+    {
+        // PostgreSQL
+        Console.WriteLine("[INFO] Using PostgreSQL provider");
+        options.UseNpgsql(connectionString);
+    }
+    else if (connectionString.Contains("Server="))
+    {
+        // SQL Server
+        Console.WriteLine("[INFO] Using SQL Server provider");
+        options.UseSqlServer(connectionString);
+    }
+    else
+    {
+        // SQLite (default)
+        Console.WriteLine("[INFO] Using SQLite provider");
+        options.UseSqlite(connectionString);
+    }
 });
 
 // 2. Repository
@@ -47,21 +67,28 @@ var app = builder.Build();
 // Initialize database
 try
 {
+    Console.WriteLine("[INFO] Starting database initialization...");
     using (var scope = app.Services.CreateScope())
     {
         var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        Console.WriteLine("[INFO] Creating/migrating database...");
         context.Database.EnsureCreated();
+        Console.WriteLine("[INFO] Database creation completed successfully");
         
         // Seed sample data if empty
         if (!context.Students.Any())
         {
+            Console.WriteLine("[INFO] Seeding sample data...");
             SeedSampleData(context);
+            Console.WriteLine("[INFO] Sample data seeded successfully");
         }
     }
+    Console.WriteLine("[INFO] Database initialization completed");
 }
 catch (Exception ex)
 {
-    Console.WriteLine($"Database initialization error: {ex.Message}");
+    Console.WriteLine($"[ERROR] Database initialization error: {ex.Message}");
+    Console.WriteLine($"[ERROR] Stack trace: {ex.StackTrace}");
 }
 
 // Configure the HTTP request pipeline

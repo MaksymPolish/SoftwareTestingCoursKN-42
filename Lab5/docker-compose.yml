@@ -28,10 +28,10 @@ services:
     container_name: lab5-api
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
-      - ASPNETCORE_URLS=http://+:8080
-      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=lab5_db;Username=postgres;Password=postgres
+      - ASPNETCORE_URLS=http://+:5000
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=lab5_db;User Id=postgres;Password=postgres
     ports:
-      - "8080:8080"
+      - "5000:5000"
     depends_on:
       postgres:
         condition: service_healthy

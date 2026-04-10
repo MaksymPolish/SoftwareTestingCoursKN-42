@@ -14,6 +14,7 @@ public class StudentValidationTests
     {
         var ct = TestContext.Current.CancellationToken;
 
+        // Arrange
         var request = new CreateStudentRequest
         {
             FullName = "John Doe",
@@ -21,8 +22,10 @@ public class StudentValidationTests
             EnrollmentDate = DateTime.UtcNow.AddDays(-1)
         };
 
+        // Act
         var result = await _createValidator.ValidateAsync(request, ct);
 
+        // Assert
         result.IsValid.ShouldBeTrue();
         result.Errors.ShouldBeEmpty();
     }
@@ -32,6 +35,7 @@ public class StudentValidationTests
     {
         var ct = TestContext.Current.CancellationToken;
 
+        // Arrange
         var request = new CreateStudentRequest
         {
             FullName = "",
@@ -39,8 +43,10 @@ public class StudentValidationTests
             EnrollmentDate = DateTime.UtcNow
         };
 
+        // Act
         var result = await _createValidator.ValidateAsync(request, ct);
 
+        // Assert
         result.IsValid.ShouldBeFalse();
         result.Errors.ShouldNotBeEmpty();
         result.Errors.Any(e => e.PropertyName == "FullName").ShouldBeTrue();
@@ -51,6 +57,7 @@ public class StudentValidationTests
     {
         var ct = TestContext.Current.CancellationToken;
 
+        // Arrange
         var request = new CreateStudentRequest
         {
             FullName = "John Doe",
@@ -58,8 +65,10 @@ public class StudentValidationTests
             EnrollmentDate = DateTime.UtcNow
         };
 
+        // Act
         var result = await _createValidator.ValidateAsync(request, ct);
 
+        // Assert
         result.IsValid.ShouldBeFalse();
         result.Errors.Any(e => e.PropertyName == "Email").ShouldBeTrue();
     }
@@ -69,6 +78,7 @@ public class StudentValidationTests
     {
         var ct = TestContext.Current.CancellationToken;
 
+        // Arrange
         var request = new CreateStudentRequest
         {
             FullName = "John Doe",
@@ -76,8 +86,10 @@ public class StudentValidationTests
             EnrollmentDate = DateTime.UtcNow.AddDays(1)
         };
 
+        // Act
         var result = await _createValidator.ValidateAsync(request, ct);
 
+        // Assert
         result.IsValid.ShouldBeFalse();
         result.Errors.Any(e => e.PropertyName == "EnrollmentDate").ShouldBeTrue();
     }
@@ -87,6 +99,7 @@ public class StudentValidationTests
     {
         var ct = TestContext.Current.CancellationToken;
 
+        // Arrange
         var request = new UpdateStudentRequest
         {
             Id = 0,
@@ -94,8 +107,10 @@ public class StudentValidationTests
             Email = "jane@example.com"
         };
 
+        // Act
         var result = await _updateValidator.ValidateAsync(request, ct);
 
+        // Assert
         result.IsValid.ShouldBeFalse();
         result.Errors.Any(e => e.PropertyName == "Id").ShouldBeTrue();
     }
@@ -105,6 +120,7 @@ public class StudentValidationTests
     {
         var ct = TestContext.Current.CancellationToken;
 
+        // Arrange
         var request = new UpdateStudentRequest
         {
             Id = 1,
@@ -112,8 +128,10 @@ public class StudentValidationTests
             Email = ""
         };
 
+        // Act
         var result = await _updateValidator.ValidateAsync(request, ct);
 
+        // Assert
         result.IsValid.ShouldBeFalse();
         result.Errors.Any(e => e.PropertyName == "Email").ShouldBeTrue();
     }

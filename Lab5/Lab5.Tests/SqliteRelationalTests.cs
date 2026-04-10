@@ -36,6 +36,7 @@ public class SqliteRelationalTests
         using (Context)
         using (Connection)
         {
+            // Arrange
             var enrollment = new Enrollment
             {
                 StudentId = 999,
@@ -44,6 +45,8 @@ public class SqliteRelationalTests
             };
 
             Context.Enrollments.Add(enrollment);
+            
+            // Act & Assert
             var exception = await Should.ThrowAsync<DbUpdateException>(
                 () => Context.SaveChangesAsync(ct));
             exception.ShouldNotBeNull();
@@ -58,6 +61,7 @@ public class SqliteRelationalTests
         using (Connection)
         using (Context)
         {
+            // Arrange
             var student1 = new Student
             {
                 FullName = "Alice", Email = "dup@test.com",
@@ -73,6 +77,7 @@ public class SqliteRelationalTests
             await Context.SaveChangesAsync(ct);
             Context.Students.Add(student2);
 
+            // Act & Assert
             await Should.ThrowAsync<DbUpdateException>(
                 () => Context.SaveChangesAsync(ct));
         }
@@ -86,6 +91,7 @@ public class SqliteRelationalTests
         using (Connection)
         using (Context)
         {
+            // Arrange
             var course = new Course { Title = "CS101", Credits = 3 };
             var student = new Student
             {
@@ -99,9 +105,11 @@ public class SqliteRelationalTests
             Context.Students.Add(student);
             await Context.SaveChangesAsync(ct);
 
+            // Act
             Context.Students.Remove(student);
             await Context.SaveChangesAsync(ct);
 
+            // Assert
             var enrollments = await Context.Enrollments.ToListAsync(ct);
             enrollments.ShouldBeEmpty();
         }
