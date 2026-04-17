@@ -1,0 +1,23 @@
+# Test results
+results/*.json
+
+# Logs
+*.log
+logs/
+
+# Build artifacts
+bin/
+obj/
+
+# IDE
+.vs/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Dependencies
+node_modules/
