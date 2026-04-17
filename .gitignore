@@ -4,3 +4,5 @@
 **/coverage/
 **/appsettings.example.json
 **/appsettings.json
+api.log
+/Lab7/results
