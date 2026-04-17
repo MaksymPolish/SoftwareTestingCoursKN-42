@@ -267,6 +267,85 @@ var scenario = Scenario.Create("stress_ramp_up", async context =>
 1. Зведеною таблицею всіх результатів тестування
 2. Виявленими вузькими місцями та рекомендованими оптимізаціями
 
+## Запуск з Docker
+
+### Швидкий старт
+
+```bash
+# Запустити API та базу даних
+docker-compose up -d
+
+# Переглянути статус сервісів
+docker-compose ps
+
+# Запустити тести
+make all          # (або .\test.ps1 all на Windows)
+
+# Зупинити сервіси
+docker-compose down
+```
+
+### На Windows (PowerShell)
+
+```powershell
+# Запустити сервіси
+.\test.ps1 up
+
+# Запустити тести
+.\test.ps1 smoke    # smoke-тести
+.\test.ps1 load     # навантажувальні тести
+.\test.ps1 stress   # стрес-тести
+.\test.ps1 all      # всі тести разом
+
+# Зупинити сервіси
+.\test.ps1 down
+
+# Переглянути логи
+.\test.ps1 logs
+```
+
+### На Linux/macOS
+
+```bash
+# Дати дозвіл на виконання
+chmod +x test.sh
+
+# Запустити тести
+./test.sh up       # запустити сервіси
+./test.sh smoke    # smoke-тести
+./test.sh all      # всі тести
+./test.sh down     # зупинити
+```
+
+### Використання Makefile
+
+```bash
+make up            # запустити сервіси
+make smoke         # smoke-тести
+make load          # навантажувальні тести
+make stress        # стрес-тести
+make all           # всі тести
+make clean         # очистити контейнери
+make help          # переглянути всі команди
+```
+
+### Результати тестів
+
+Результати зберігаються в папці `results/`:
+- `smoke_test_results.json`
+- `load_test_results.json`
+- `stress_test_results.json`
+
+## Автоматичне тестування (CI/CD)
+
+Проєкт включає GitHub Actions pipeline (`.github/workflows/ci-cd.yml`), який автоматично:
+
+1. Збирає .NET проєкт
+2. Запускає smoke-тести
+3. Запускає навантажувальні та стрес-тести
+4. Будує Docker образ
+5. Завантажує результати тестів як артефакти
+
 ## Оцінювання
 
 | Критерії |

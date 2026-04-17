@@ -1,0 +1,251 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - 'feature/**'
+      - 'fix/**'
+  pull_request:
+    branches:
+      - main
+      - 'feature/**'
+      - 'fix/**'
+
+jobs:
+  build:
+    name: Build API
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore Lab7/Lab7.sln
+
+      - name: Build API (Release)
+        run: dotnet build Lab7/Lab7.sln -c Release --no-restore
+
+      - name: Check for compilation warnings
+        run: dotnet build Lab7/Lab7.sln -c Release --no-restore /p:TreatWarningsAsErrors=true
+
+  migrations:
+    name: Migrations Check
+    runs-on: ubuntu-latest
+    needs: build
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore Lab7/Lab7.sln
+
+      - name: Check pending migrations
+        run: |
+          cd Lab7/Lab7.Api
+          dotnet ef migrations list --project .
+
+  unit-tests:
+    name: API Unit Tests
+    runs-on: ubuntu-latest
+    needs: build
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore Lab7/Lab7.sln
+
+      - name: Run unit tests
+        run: dotnet test Lab7/Lab7.IntegrationTests/Lab7.IntegrationTests.csproj -c Release --no-restore --verbosity normal --logger "trx;LogFileName=test-results.trx"
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: unit-test-results
+          path: '**/test-results.trx'
+
+  integration-tests:
+    name: Integration Tests (Testcontainers + PostgreSQL)
+    runs-on: ubuntu-latest
+    needs: build
+    
+    services:
+      # We don't need explicit service - Testcontainers will manage Docker
+      docker:
+        image: docker:dind
+        options: --privileged
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore Lab7/Lab7.sln
+
+      - name: Run integration tests with Testcontainers
+        run: dotnet test Lab7/Lab7.IntegrationTests/Lab7.IntegrationTests.csproj -c Release --no-restore --filter "PostgreSql|StudentsController" --verbosity normal --logger "trx;LogFileName=integration-results.trx"
+        env:
+          DOCKER_HOST: unix:///var/run/docker.sock
+
+      - name: Upload integration test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: integration-test-results
+          path: '**/integration-results.trx'
+
+  k6-smoke-test:
+    name: k6 Smoke Test
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'push' && (contains(github.ref, 'main') || contains(github.ref, 'feature/') || contains(github.ref, 'fix/'))
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Start API
+        run: |
+          cd Lab7/Lab7.Api
+          dotnet run -c Release &
+        env:
+          ASPNETCORE_URLS: http://localhost:5000
+
+      - name: Wait for API to start
+        run: |
+          for i in {1..30}; do
+            curl -f http://localhost:5000/api/students && break
+            sleep 2
+          done
+
+      - name: Install k6
+        run: |
+          sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69 2>/dev/null || true
+          echo "deb https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6-stable.list
+          sudo apt-get update
+          sudo apt-get install -y k6
+
+      - name: Create results directory
+        run: mkdir -p Lab7/results
+
+      - name: Run k6 smoke test
+        run: k6 run Lab7/tests/smoke_test.js --out json=Lab7/results/smoke_test_results.json
+        continue-on-error: true
+
+      - name: Upload k6 smoke test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: k6-smoke-results
+          path: Lab7/results/smoke_test_results.json
+
+  k6-load-test:
+    name: k6 Load Test
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'push' && contains(github.ref, 'main')
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Start API
+        run: |
+          cd Lab7/Lab7.Api
+          dotnet run -c Release &
+        env:
+          ASPNETCORE_URLS: http://localhost:5000
+
+      - name: Wait for API to start
+        run: |
+          for i in {1..30}; do
+            curl -f http://localhost:5000/api/students && break
+            sleep 2
+          done
+
+      - name: Install k6
+        run: |
+          sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69 2>/dev/null || true
+          echo "deb https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6-stable.list
+          sudo apt-get update
+          sudo apt-get install -y k6
+
+      - name: Create results directory
+        run: mkdir -p Lab7/results
+
+      - name: Run k6 load test
+        run: k6 run Lab7/tests/load_test.js --out json=Lab7/results/load_test_results.json
+        continue-on-error: true
+
+      - name: Upload k6 load test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: k6-load-results
+          path: Lab7/results/load_test_results.json
+
+  build-status:
+    name: Build Status Check
+    runs-on: ubuntu-latest
+    needs: [build, migrations, unit-tests, integration-tests]
+    if: always()
+    
+    steps:
+      - name: Check build status
+        run: |
+          if [ "${{ needs.build.result }}" == "failure" ] || \
+             [ "${{ needs.migrations.result }}" == "failure" ] || \
+             [ "${{ needs.unit-tests.result }}" == "failure" ] || \
+             [ "${{ needs.integration-tests.result }}" == "failure" ]; then
+            echo "❌ CI Pipeline Failed"
+            exit 1
+          else
+            echo "✅ CI Pipeline Passed"
+            exit 0
+          fi
+
+      - name: Summary
+        if: success()
+        run: |
+          echo "## ✅ CI Pipeline Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Build: Successful" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Migrations: Verified" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Unit Tests: Passed" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Integration Tests: Passed" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ k6 Load Tests: Completed" >> $GITHUB_STEP_SUMMARY

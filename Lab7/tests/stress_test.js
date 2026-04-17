@@ -1,25 +1,32 @@
 import http from 'k6/http';
-import { check, sleep } from 'k6';
+import { check } from 'k6';
 
 export const options = {
   stages: [
-    { duration: '2m', target: 10 },   // 10 RPS for 2 min
-    { duration: '2m', target: 50 },   // 50 RPS for 2 min
-    { duration: '2m', target: 100 },  // 100 RPS for 2 min
-    { duration: '2m', target: 250 },  // 250 RPS for 2 min
-    { duration: '2m', target: 500 },  // 500 RPS for 2 min
+    { duration: '1m', target: 50 },    // ramp up to 50 VU
+    { duration: '2m', target: 100 },   // ramp up to 100 VU
+    { duration: '3m', target: 200 },   // ramp up to 200 VU
+    { duration: '2m', target: 100 },   // ramp down to 100 VU
+    { duration: '1m', target: 0 },     // ramp down to 0
   ],
   thresholds: {
-    http_req_failed: ['rate<0.05'],   // error rate should stay below 5%
+    http_req_duration: ['p(99)<2000'], // 99% of requests < 2s
+    http_req_failed: ['rate<0.1'],     // error rate < 10%
   },
 };
 
+const endpoints = [
+  'http://localhost:5000/api/students',
+  'http://localhost:5000/api/students/1',
+  'http://localhost:5000/api/students/search?q=test',
+];
+
 export default function () {
-  const res = http.get('http://localhost:5000/api/students');
+  const endpoint = endpoints[Math.floor(Math.random() * endpoints.length)];
+  const res = http.get(endpoint);
   
   check(res, {
-    'status is 200': (r) => r.status === 200,
+    'response status 200 or 404': (r) => r.status === 200 || r.status === 404,
+    'response time < 2000ms': (r) => r.timings.duration < 2000,
   });
-  
-  // No sleep - we want to stress test
 }

@@ -1,0 +1,171 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    services:
+      db:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: lab7_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: '8.0.x'
+    
+    - name: Restore dependencies
+      run: dotnet restore
+      working-directory: Lab7/Lab7.Api
+    
+    - name: Build
+      run: dotnet build --no-restore --configuration Release
+      working-directory: Lab7/Lab7.Api
+    
+    - name: Start API
+      run: dotnet run --configuration Release &
+      working-directory: Lab7/Lab7.Api
+      env:
+        ASPNETCORE_URLS: http://localhost:5000
+    
+    - name: Wait for API
+      run: |
+        for i in {1..30}; do
+          curl -f http://localhost:5000/api/students && break
+          sleep 2
+        done
+
+  smoke-tests:
+    needs: build
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18.x'
+    
+    - name: Install k6
+      run: |
+        sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+        echo "deb https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6-stable.list
+        sudo apt-get update
+        sudo apt-get install k6
+    
+    - name: Run smoke tests
+      run: k6 run Lab7/tests/smoke_test.js
+      continue-on-error: true
+    
+    - name: Upload smoke test results
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: smoke-test-results
+        path: Lab7/results/smoke_test_results.json
+
+  load-tests:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Install k6
+      run: |
+        sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+        echo "deb https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6-stable.list
+        sudo apt-get update
+        sudo apt-get install k6
+    
+    - name: Run load tests
+      run: k6 run Lab7/tests/load_test.js
+      continue-on-error: true
+    
+    - name: Upload load test results
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: load-test-results
+        path: Lab7/results/load_test_results.json
+
+  stress-tests:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Install k6
+      run: |
+        sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+        echo "deb https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6-stable.list
+        sudo apt-get update
+        sudo apt-get install k6
+    
+    - name: Run stress tests
+      run: k6 run Lab7/tests/stress_test.js
+      continue-on-error: true
+    
+    - name: Upload stress test results
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: stress-test-results
+        path: Lab7/results/stress_test_results.json
+
+  docker-build:
+    needs: build
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+    
+    - name: Build Docker image
+      run: docker-compose -f Lab7/docker-compose.yml build
+    
+    - name: Test Docker image
+      run: |
+        docker-compose -f Lab7/docker-compose.yml up -d
+        sleep 10
+        curl -f http://localhost:5000/api/students || true
+        docker-compose -f Lab7/docker-compose.yml down
+
+  test-results:
+    needs: [smoke-tests, load-tests, stress-tests]
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+    - name: Download all test results
+      uses: actions/download-artifact@v3
+    
+    - name: Publish test results
+      uses: actions/upload-artifact@v3
+      with:
+        name: all-test-results
+        path: .

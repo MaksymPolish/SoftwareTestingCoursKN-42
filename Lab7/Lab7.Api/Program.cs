@@ -1,14 +1,14 @@
+using AutoFixture;
 using Lab7.Api.Data;
+using Lab7.Api.Models;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Configure PostgreSQL connection
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
     ?? "Host=localhost;Port=5432;Database=Lab7;Username=postgres;Password=postgres";
 
@@ -18,7 +18,6 @@ builder.Services.AddDbContext<StudentContext>(options =>
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -28,8 +27,8 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseAuthorization();
 app.MapControllers();
+app.UseResponseCompression();
 
-// Seed database on startup
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<StudentContext>();
@@ -37,34 +36,24 @@ using (var scope = app.Services.CreateScope())
     
     if (!context.Students.Any())
     {
-        SeedDatabase(context);
+        // Seed database with AutoFixture
+        var fixture = new Fixture();
+
+        fixture.Customize<Student>(composer => composer
+            .With(s => s.Email, () => $"student{fixture.Create<int>():D5}@university.edu")
+            .With(s => s.StudentNumber, () => $"STU{fixture.Create<int>():D6}")
+            .With(s => s.CourseYear, () => (fixture.Create<int>() % 4) + 1)
+            .With(s => s.GPA, () => Math.Round((decimal)(fixture.Create<double>() * 4.0), 2))
+            .With(s => s.EnrollmentDate, () => DateTime.UtcNow.AddDays(-(fixture.Create<int>() % (365 * 4))))
+            .Without(s => s.Id)
+        );
+
+        var students = fixture.CreateMany<Student>(10000).ToList();
+        context.Students.AddRange(students);
+        context.SaveChanges();
+        
+        Console.WriteLine($"Database seeded with {students.Count} students using AutoFixture.");
     }
 }
 
 app.Run();
-
-void SeedDatabase(StudentContext context)
-{
-    var random = new Random(42); // For reproducible results
-    var firstNames = new[] { "Alice", "Bob", "Charlie", "Diana", "Eve", "Frank", "Grace", "Henry", "Iris", "Jack" };
-    var lastNames = new[] { "Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Davis", "Rodriguez", "Martinez" };
-    var students = new List<Lab7.Api.Models.Student>();
-
-    for (int i = 1; i <= 10000; i++)
-    {
-        students.Add(new Lab7.Api.Models.Student
-        {
-            FirstName = firstNames[random.Next(firstNames.Length)],
-            LastName = lastNames[random.Next(lastNames.Length)],
-            Email = $"student{i:D5}@university.edu",
-            StudentNumber = $"STU{i:D6}",
-            CourseYear = random.Next(1, 5),
-            GPA = (decimal)(random.NextDouble() * 4.0),
-            EnrollmentDate = DateTime.UtcNow.AddDays(-random.Next(0, 365 * 4))
-        });
-    }
-
-    context.Students.AddRange(students);
-    context.SaveChanges();
-    Console.WriteLine("Database seeded with 10,000 students.");
-}
